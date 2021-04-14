@@ -237,7 +237,8 @@ bool TreeBillboardsApp::Initialize()
 	// so we have to query this information.
     mCbvSrvDescriptorSize = md3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-	mCamera.SetPosition(-5.f, 50.0f, -100.0f);
+	//mCamera.SetPosition(-5.f, 50.0f, -100.0f);
+	mCamera.SetPosition(0.f, 10.0f, -65.0f);
 	mCameraBoundbox.Center = mCamera.GetPosition3f();
 	mCameraBoundbox.Extents = XMFLOAT3(1.1f, 1.1f, 1.1f);
 
@@ -425,6 +426,16 @@ void TreeBillboardsApp::OnMouseMove(WPARAM btnState, int x, int y)
  
 void TreeBillboardsApp::OnKeyboardInput(const GameTimer& gt)
 {
+	
+	
+	if (GetAsyncKeyState('1') & 0x8000)
+	{
+		mCamera.SetPosition(-5.f, 50.0f, -100.0f);
+	}
+	else if (GetAsyncKeyState('2') & 0x8000)
+	{
+		mCamera.SetPosition(0.f, 10.0f, -65.0f);
+	}
 	/*if (GetAsyncKeyState('1') & 0x8000)
 		mIsWireframe = true;
 	else
