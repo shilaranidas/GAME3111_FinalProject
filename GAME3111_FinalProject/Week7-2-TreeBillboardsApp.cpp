@@ -217,6 +217,7 @@ void TreeBillboardsApp::CreateItemT(const char* item, XMMATRIX p, XMMATRIX q, XM
 	RightWall->Geo = mGeometries["boxGeo"].get();
 
 	RightWall->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	RightWall->Bounds = RightWall->Geo->DrawArgs[item].Bounds;
 	RightWall->IndexCount = RightWall->Geo->DrawArgs[item].IndexCount;
 	RightWall->StartIndexLocation = RightWall->Geo->DrawArgs[item].StartIndexLocation;
 	RightWall->BaseVertexLocation = RightWall->Geo->DrawArgs[item].BaseVertexLocation;
@@ -236,7 +237,7 @@ bool TreeBillboardsApp::Initialize()
 	// so we have to query this information.
     mCbvSrvDescriptorSize = md3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-	mCamera.SetPosition(-5.f, 3.0f, -10.0f);
+	mCamera.SetPosition(-5.f, 50.0f, -100.0f);
 	mCameraBoundbox.Center = mCamera.GetPosition3f();
 	mCameraBoundbox.Extents = XMFLOAT3(1.1f, 1.1f, 1.1f);
 
@@ -424,10 +425,10 @@ void TreeBillboardsApp::OnMouseMove(WPARAM btnState, int x, int y)
  
 void TreeBillboardsApp::OnKeyboardInput(const GameTimer& gt)
 {
-	if (GetAsyncKeyState('1') & 0x8000)
+	/*if (GetAsyncKeyState('1') & 0x8000)
 		mIsWireframe = true;
 	else
-		mIsWireframe = false;
+		mIsWireframe = false;*/
 
 	const float dt = gt.DeltaTime();
 
@@ -979,7 +980,7 @@ void TreeBillboardsApp::BuildShadersAndInputLayouts()
 void TreeBillboardsApp::BuildLandGeometry()
 {
     GeometryGenerator geoGen;
-    GeometryGenerator::MeshData grid = geoGen.CreateGrid(100.0f, 140.0f, 10, 10);
+    GeometryGenerator::MeshData grid = geoGen.CreateGrid(80.0f, 120.0f, 10, 10);
 
     //
     // Extract the vertex elements we are interested and apply the height function to
@@ -1225,63 +1226,159 @@ void TreeBillboardsApp::BuildBoxGeometry()
 		vMin = XMVectorMin(vMin, P);
 		vMax = XMVectorMax(vMax, P);
 	}
+	//step 3
+	BoundingBox bounds;
+	XMStoreFloat3(&bounds.Center, 0.5f * (vMin + vMax));
+	XMStoreFloat3(&bounds.Extents, 0.5f * (vMax - vMin));
+	//step 4
+	boxSubmesh.Bounds = bounds;
+	vMin = XMLoadFloat3(&vMinf3);
+	vMax = XMLoadFloat3(&vMaxf3);
 	for (size_t i = 0; i < sphere.Vertices.size(); ++i, ++k)
 	{
 		vertices[k].Pos = sphere.Vertices[i].Position;
 		vertices[k].Normal = sphere.Vertices[i].Normal;
 		vertices[k].TexC = sphere.Vertices[i].TexC;
 		//vertices[k].Color = XMFLOAT4(DirectX::Colors::Crimson);
-	}
 
+		// Calculate Bound Box
+			//step 2
+			XMVECTOR P = XMLoadFloat3(&sphere.Vertices[i].Position);
+		vMin = XMVectorMin(vMin, P);
+		vMax = XMVectorMax(vMax, P);
+	}
+	XMStoreFloat3(&bounds.Center, 0.5f * (vMin + vMax));
+	XMStoreFloat3(&bounds.Extents, 0.5f * (vMax - vMin));
+	//step 4
+	sphereSubmesh.Bounds = bounds;
+	vMin = XMLoadFloat3(&vMinf3);
+	vMax = XMLoadFloat3(&vMaxf3);
 	for (size_t i = 0; i < cylinder.Vertices.size(); ++i, ++k)
 	{
 		vertices[k].Pos = cylinder.Vertices[i].Position;
 		vertices[k].Normal = cylinder.Vertices[i].Normal;
 		vertices[k].TexC = cylinder.Vertices[i].TexC;
 		//vertices[k].Color = XMFLOAT4(DirectX::Colors::SteelBlue);
+		// Calculate Bound Box
+			//step 2
+		XMVECTOR P = XMLoadFloat3(&cylinder.Vertices[i].Position);
+		vMin = XMVectorMin(vMin, P);
+		vMax = XMVectorMax(vMax, P);
 	}
+	XMStoreFloat3(&bounds.Center, 0.5f * (vMin + vMax));
+	XMStoreFloat3(&bounds.Extents, 0.5f * (vMax - vMin));
+	//step 4
+	cylinderSubmesh.Bounds = bounds;
+	vMin = XMLoadFloat3(&vMinf3);
+	vMax = XMLoadFloat3(&vMaxf3);
 	for (size_t i = 0; i < cone.Vertices.size(); ++i, ++k)
 	{
 		vertices[k].Pos = cone.Vertices[i].Position;
 		vertices[k].Normal = cone.Vertices[i].Normal;
 		vertices[k].TexC = cone.Vertices[i].TexC;
 		// vertices[k].Color = XMFLOAT4(DirectX::Colors::Blue);
+		// Calculate Bound Box
+			//step 2
+		XMVECTOR P = XMLoadFloat3(&cone.Vertices[i].Position);
+		vMin = XMVectorMin(vMin, P);
+		vMax = XMVectorMax(vMax, P);
 	}
+	XMStoreFloat3(&bounds.Center, 0.5f * (vMin + vMax));
+	XMStoreFloat3(&bounds.Extents, 0.5f * (vMax - vMin));
+	//step 4
+	coneSubmesh.Bounds = bounds;
+	vMin = XMLoadFloat3(&vMinf3);
+	vMax = XMLoadFloat3(&vMaxf3);
 	for (size_t i = 0; i < pyramid.Vertices.size(); ++i, ++k)
 	{
 		vertices[k].Pos = pyramid.Vertices[i].Position;
 		vertices[k].Normal = pyramid.Vertices[i].Normal;
 		vertices[k].TexC = pyramid.Vertices[i].TexC;
 		// vertices[k].Color = XMFLOAT4(DirectX::Colors::Blue);
+		// Calculate Bound Box
+			//step 2
+		XMVECTOR P = XMLoadFloat3(&pyramid.Vertices[i].Position);
+		vMin = XMVectorMin(vMin, P);
+		vMax = XMVectorMax(vMax, P);
 	}
+	XMStoreFloat3(&bounds.Center, 0.5f * (vMin + vMax));
+	XMStoreFloat3(&bounds.Extents, 0.5f * (vMax - vMin));
+	//step 4
+	pyramidSubmesh.Bounds = bounds;
+	vMin = XMLoadFloat3(&vMinf3);
+	vMax = XMLoadFloat3(&vMaxf3);
 	for (size_t i = 0; i < wedge.Vertices.size(); ++i, ++k)
 	{
 		vertices[k].Pos = wedge.Vertices[i].Position;
 		vertices[k].Normal = wedge.Vertices[i].Normal;
 		vertices[k].TexC = wedge.Vertices[i].TexC;
 		// vertices[k].Color = XMFLOAT4(DirectX::Colors::Blue);
+		// Calculate Bound Box
+			//step 2
+		XMVECTOR P = XMLoadFloat3(&wedge.Vertices[i].Position);
+		vMin = XMVectorMin(vMin, P);
+		vMax = XMVectorMax(vMax, P);
 	}
+	XMStoreFloat3(&bounds.Center, 0.5f * (vMin + vMax));
+	XMStoreFloat3(&bounds.Extents, 0.5f * (vMax - vMin));
+	//step 4
+	wedgeSubmesh.Bounds = bounds;
+	vMin = XMLoadFloat3(&vMinf3);
+	vMax = XMLoadFloat3(&vMaxf3);
 	for (size_t i = 0; i < diamond.Vertices.size(); ++i, ++k)
 	{
 		vertices[k].Pos = diamond.Vertices[i].Position;
 		vertices[k].Normal = diamond.Vertices[i].Normal;
 		vertices[k].TexC = diamond.Vertices[i].TexC;
 		// vertices[k].Color = XMFLOAT4(DirectX::Colors::Blue);
+		// Calculate Bound Box
+			//step 2
+		XMVECTOR P = XMLoadFloat3(&diamond.Vertices[i].Position);
+		vMin = XMVectorMin(vMin, P);
+		vMax = XMVectorMax(vMax, P);
 	}
+	XMStoreFloat3(&bounds.Center, 0.5f * (vMin + vMax));
+	XMStoreFloat3(&bounds.Extents, 0.5f * (vMax - vMin));
+	//step 4
+	diamondSubmesh.Bounds = bounds;
+	vMin = XMLoadFloat3(&vMinf3);
+	vMax = XMLoadFloat3(&vMaxf3);
 	for (size_t i = 0; i < triangularPrism.Vertices.size(); ++i, ++k)
 	{
 		vertices[k].Pos = triangularPrism.Vertices[i].Position;
 		vertices[k].Normal = triangularPrism.Vertices[i].Normal;
 		vertices[k].TexC = triangularPrism.Vertices[i].TexC;
 		// vertices[k].Color = XMFLOAT4(DirectX::Colors::Blue);
+		// Calculate Bound Box
+			//step 2
+		XMVECTOR P = XMLoadFloat3(&triangularPrism.Vertices[i].Position);
+		vMin = XMVectorMin(vMin, P);
+		vMax = XMVectorMax(vMax, P);
 	}
+	XMStoreFloat3(&bounds.Center, 0.5f * (vMin + vMax));
+	XMStoreFloat3(&bounds.Extents, 0.5f * (vMax - vMin));
+	//step 4
+	triangularPrismSubmesh.Bounds = bounds;
+	vMin = XMLoadFloat3(&vMinf3);
+	vMax = XMLoadFloat3(&vMaxf3);
 	for (size_t i = 0; i < torus.Vertices.size(); ++i, ++k)
 	{
 		vertices[k].Pos = torus.Vertices[i].Position;
 		vertices[k].Normal = torus.Vertices[i].Normal;
 		vertices[k].TexC = torus.Vertices[i].TexC;
 		// vertices[k].Color = XMFLOAT4(DirectX::Colors::Blue);
+		// Calculate Bound Box
+			//step 2
+		XMVECTOR P = XMLoadFloat3(&torus.Vertices[i].Position);
+		vMin = XMVectorMin(vMin, P);
+		vMax = XMVectorMax(vMax, P);
 	}
+	XMStoreFloat3(&bounds.Center, 0.5f * (vMin + vMax));
+	XMStoreFloat3(&bounds.Extents, 0.5f * (vMax - vMin));
+	//step 4
+	torusSubmesh.Bounds = bounds;
+	vMin = XMLoadFloat3(&vMinf3);
+	vMax = XMLoadFloat3(&vMaxf3);
 	std::vector<std::uint16_t> indices;
 	indices.insert(indices.end(), std::begin(box.GetIndices16()), std::end(box.GetIndices16()));
 
@@ -1322,12 +1419,7 @@ void TreeBillboardsApp::BuildBoxGeometry()
 	//submesh.IndexCount = (UINT)indices.size();
 	//submesh.StartIndexLocation = 0;
 	//submesh.BaseVertexLocation = 0; 
-	//step 3
-	BoundingBox bounds;
-	XMStoreFloat3(&bounds.Center, 0.5f * (vMin + vMax));
-	XMStoreFloat3(&bounds.Extents, 0.5f * (vMax - vMin));
-	//step 4
-	boxSubmesh.Bounds = bounds;
+	
 
 		geo->DrawArgs["box"] = boxSubmesh;
 
@@ -1687,80 +1779,80 @@ void TreeBillboardsApp::BuildRenderItems()
 	objCBIndex++;
 	CreateItem("box", XMMatrixScaling(30.0f, 1.0f, 1.0f), XMMatrixTranslation(0.0f, 10.0f, 25.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "wirefence");//back wall
 	objCBIndex++;
-	//CreateItem("box", XMMatrixScaling(14.0f, 1.0f, 1.0f), XMMatrixTranslation(-16.0f, 10.0f, -1.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "wirefence");//front left wall
-	//objCBIndex++;
-	//CreateItem("box", XMMatrixScaling(14.0f, 1.0f, 1.0f), XMMatrixTranslation(16.0f, 10.0f, -1.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "wirefence");//front right wall
-	//objCBIndex++;
-	//CreateItem("box", XMMatrixScaling(1.0f, 1.0f, 14.0f), XMMatrixTranslation(25.0f, 10.0f, 12.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "wirefence");//left wall
-	//objCBIndex++;
-	//CreateItem("box", XMMatrixScaling(1.0f, 1.0f, 14.0f), XMMatrixTranslation(-25.0f, 10.0f, 12.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "wirefence");//right wall
-	//objCBIndex++;
-	//CreateItem("cylinder", XMMatrixScaling(5.0f, 5.5f, 5.0f), XMMatrixTranslation(25.0f, 10.0f, 25.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "stone");// back right 
-	//objCBIndex++;
-	//CreateItem("cylinder", XMMatrixScaling(5.0f, 5.5f, 5.0f), XMMatrixTranslation(-25.0f, 10.0f, 25.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "stone");// back left 
-	//objCBIndex++;
-	//CreateItem("cylinder", XMMatrixScaling(5.0f, 5.5f, 5.0f), XMMatrixTranslation(25.0f, 10.0f, -1.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "stone");// back right 
-	//objCBIndex++;
-	//CreateItem("cylinder", XMMatrixScaling(5.0f, 5.5f, 5.0f), XMMatrixTranslation(-25.0f, 10.0f, -1.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "stone");// back left 
-	//objCBIndex++;
-	//CreateItem("cone", XMMatrixScaling(4.0f, 5.5f, 4.0f), XMMatrixTranslation(25.0f, 20.0f, 25.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "sand");// back right 
-	//objCBIndex++;
-	//CreateItem("cone", XMMatrixScaling(4.0f, 5.5f, 4.0f), XMMatrixTranslation(-25.0f, 20.0f, 25.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "sand");// back left 
-	//objCBIndex++;
-	//CreateItem("cone", XMMatrixScaling(4.0f, 5.5f, 4.0f), XMMatrixTranslation(25.0f, 20.0f, -1.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "sand");// back right 
-	//objCBIndex++;
-	//CreateItem("cone", XMMatrixScaling(4.0f, 5.5f, 4.0f), XMMatrixTranslation(-25.0f, 20.0f, -1.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "sand");// back right 
-	//objCBIndex++;
-	//CreateItem("diamond", XMMatrixScaling(2.0f, 4.0f, 2.0f), XMMatrixTranslation(25.0f, 25.0f, 25.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "diamond");// back right 
-	//objCBIndex++;
-	//CreateItem("diamond", XMMatrixScaling(2.0f, 4.0f, 2.0f), XMMatrixTranslation(-25.0f, 25.0f, 25.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "diamond");// back left 
-	//objCBIndex++;
-	//CreateItem("diamond", XMMatrixScaling(2.0f, 4.0f, 2.0f), XMMatrixTranslation(25.0f, 25.0f, -1.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "diamond");// back right 
-	//objCBIndex++;
-	//CreateItem("diamond", XMMatrixScaling(2.0f, 4.0f, 2.0f), XMMatrixTranslation(-25.0f, 25.0f, -1.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "diamond");// back right 
-	//objCBIndex++;
-	//CreateItem("sphere", XMMatrixScaling(5.0f, 5.0f, 5.0f), XMMatrixTranslation(0.0f, 17.0f, 13.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "ball");// back left 
-	//objCBIndex++;
-	//CreateItem("pyramid", XMMatrixScaling(10.0f, 10.0f, 10.0f), XMMatrixTranslation(0.0f, 10.0f, 13.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "pyramid");// back left 
-	//objCBIndex++;
-	//CreateItem("wedge", XMMatrixScaling(11.0f, 5.0f, 10.0f), XMMatrixTranslation(0.0f, 7.0f, -5.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "stair");// back left 
-	//objCBIndex++;
-	//CreateItemT("triangularPrism", XMMatrixScaling(5.0f, 5.0f, 5.0f), XMMatrixTranslation(7.0f, -25.0f, -8.0f), XMMatrixRotationRollPitchYaw( 0.0f, 0.f, XM_PIDIV2), objCBIndex, "tripris");// back left 
-	//objCBIndex++;
-	//CreateItem("torus", XMMatrixScaling(3.0f, 3.0f, 3.0f), XMMatrixTranslation(24.8f, 12.0f, -8.0f), XMMatrixRotationRollPitchYaw(0.0f, 0.f, 0.0f), objCBIndex, "torus");// back left 
-	//objCBIndex++;
+	CreateItem("box", XMMatrixScaling(14.0f, 1.0f, 1.0f), XMMatrixTranslation(-16.0f, 10.0f, -1.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "wirefence");//front left wall
+	objCBIndex++;
+	CreateItem("box", XMMatrixScaling(14.0f, 1.0f, 1.0f), XMMatrixTranslation(16.0f, 10.0f, -1.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "wirefence");//front right wall
+	objCBIndex++;
+	CreateItem("box", XMMatrixScaling(1.0f, 1.0f, 14.0f), XMMatrixTranslation(25.0f, 10.0f, 12.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "wirefence");//left wall
+	objCBIndex++;
+	CreateItem("box", XMMatrixScaling(1.0f, 1.0f, 14.0f), XMMatrixTranslation(-25.0f, 10.0f, 12.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "wirefence");//right wall
+	objCBIndex++;
+	CreateItem("cylinder", XMMatrixScaling(5.0f, 5.5f, 5.0f), XMMatrixTranslation(25.0f, 10.0f, 25.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "stone");// back right 
+	objCBIndex++;
+	CreateItem("cylinder", XMMatrixScaling(5.0f, 5.5f, 5.0f), XMMatrixTranslation(-25.0f, 10.0f, 25.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "stone");// back left 
+	objCBIndex++;
+	CreateItem("cylinder", XMMatrixScaling(5.0f, 5.5f, 5.0f), XMMatrixTranslation(25.0f, 10.0f, -1.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "stone");// back right 
+	objCBIndex++;
+	CreateItem("cylinder", XMMatrixScaling(5.0f, 5.5f, 5.0f), XMMatrixTranslation(-25.0f, 10.0f, -1.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "stone");// back left 
+	objCBIndex++;
+	CreateItem("cone", XMMatrixScaling(4.0f, 5.5f, 4.0f), XMMatrixTranslation(25.0f, 20.0f, 25.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "sand");// back right 
+	objCBIndex++;
+	CreateItem("cone", XMMatrixScaling(4.0f, 5.5f, 4.0f), XMMatrixTranslation(-25.0f, 20.0f, 25.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "sand");// back left 
+	objCBIndex++;
+	CreateItem("cone", XMMatrixScaling(4.0f, 5.5f, 4.0f), XMMatrixTranslation(25.0f, 20.0f, -1.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "sand");// back right 
+	objCBIndex++;
+	CreateItem("cone", XMMatrixScaling(4.0f, 5.5f, 4.0f), XMMatrixTranslation(-25.0f, 20.0f, -1.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "sand");// back right 
+	objCBIndex++;
+	CreateItem("diamond", XMMatrixScaling(2.0f, 4.0f, 2.0f), XMMatrixTranslation(25.0f, 25.0f, 25.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "diamond");// back right 
+	objCBIndex++;
+	CreateItem("diamond", XMMatrixScaling(2.0f, 4.0f, 2.0f), XMMatrixTranslation(-25.0f, 25.0f, 25.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "diamond");// back left 
+	objCBIndex++;
+	CreateItem("diamond", XMMatrixScaling(2.0f, 4.0f, 2.0f), XMMatrixTranslation(25.0f, 25.0f, -1.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "diamond");// back right 
+	objCBIndex++;
+	CreateItem("diamond", XMMatrixScaling(2.0f, 4.0f, 2.0f), XMMatrixTranslation(-25.0f, 25.0f, -1.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "diamond");// back right 
+	objCBIndex++;
+	CreateItem("sphere", XMMatrixScaling(5.0f, 5.0f, 5.0f), XMMatrixTranslation(0.0f, 17.0f, 13.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "ball");// back left 
+	objCBIndex++;
+	CreateItem("pyramid", XMMatrixScaling(10.0f, 10.0f, 10.0f), XMMatrixTranslation(0.0f, 10.0f, 13.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "pyramid");// back left 
+	objCBIndex++;
+	CreateItem("wedge", XMMatrixScaling(11.0f, 5.0f, 10.0f), XMMatrixTranslation(0.0f, 7.0f, -5.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "stair");// back left 
+	objCBIndex++;
+	CreateItemT("triangularPrism", XMMatrixScaling(5.0f, 5.0f, 5.0f), XMMatrixTranslation(7.0f, -25.0f, -8.0f), XMMatrixRotationRollPitchYaw( 0.0f, 0.f, XM_PIDIV2), objCBIndex, "tripris");// back left 
+	objCBIndex++;
+	CreateItem("torus", XMMatrixScaling(3.0f, 3.0f, 3.0f), XMMatrixTranslation(24.8f, 12.0f, -8.0f), XMMatrixRotationRollPitchYaw(0.0f, 0.f, 0.0f), objCBIndex, "torus");// back left 
+	objCBIndex++;
 	////start maze
-	//CreateItem("box", XMMatrixScaling(12.0f, 1.0f, .5f), XMMatrixTranslation(12.0f, 10.0f, -14.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");//back wall
-	//objCBIndex++;
-	//CreateItem("box", XMMatrixScaling(12.0f, 1.0f, .5f), XMMatrixTranslation(-12.0f, 10.0f, -14.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");//front wall
-	//objCBIndex++;
-	//CreateItem("box", XMMatrixScaling(12.0f, 1.0f, .5f), XMMatrixTranslation(12.0f, 10.0f, -34.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");//back wall
-	//objCBIndex++;
-	//CreateItem("box", XMMatrixScaling(12.0f, 1.0f, .5f), XMMatrixTranslation(-12.0f, 10.0f, -34.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");//front wall
-	//objCBIndex++;
-	//CreateItem("box", XMMatrixScaling(0.5f, 1.0f, 13.0f), XMMatrixTranslation(20.6f, 10.0f, -24.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");//Right wall
-	//objCBIndex++;
-	//CreateItem("box", XMMatrixScaling(0.5f, 1.0f, 13.0f), XMMatrixTranslation(-20.6f, 10.0f, -24.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");//Left wall
-	//objCBIndex++;
+	CreateItem("box", XMMatrixScaling(12.0f, 1.0f, .5f), XMMatrixTranslation(12.0f, 10.0f, -14.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");//back wall
+	objCBIndex++;
+	CreateItem("box", XMMatrixScaling(12.0f, 1.0f, .5f), XMMatrixTranslation(-12.0f, 10.0f, -14.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");//front wall
+	objCBIndex++;
+	CreateItem("box", XMMatrixScaling(12.0f, 1.0f, .5f), XMMatrixTranslation(12.0f, 10.0f, -48.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");//back wall
+	objCBIndex++;
+	CreateItem("box", XMMatrixScaling(12.0f, 1.0f, .5f), XMMatrixTranslation(-12.0f, 10.0f, -48.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");//front wall
+	objCBIndex++;
+	CreateItem("box", XMMatrixScaling(0.5f, 1.0f, 23.0f), XMMatrixTranslation(20.6f, 10.0f, -31.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");//Right wall
+	objCBIndex++;
+	CreateItem("box", XMMatrixScaling(0.5f, 1.0f, 23.0f), XMMatrixTranslation(-20.6f, 10.0f, -31.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");//Left wall
+	objCBIndex++;
 	////inner maze
-	//CreateItem("box", XMMatrixScaling(0.5f, 1.0f, 11.5f), XMMatrixTranslation(-14.6f, 10.0f, -22.5f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");
-	//objCBIndex++;
-	//CreateItem("box", XMMatrixScaling(0.5f, 1.0f, 3.0f), XMMatrixTranslation(3.4f, 10.0f, -16.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");
-	//objCBIndex++;
-	//CreateItem("box", XMMatrixScaling(0.5f, 1.0f, 3.0f), XMMatrixTranslation(-8.6f, 10.0f, -20.5f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");
-	//objCBIndex++;
-	//CreateItem("box", XMMatrixScaling(14.0f, 1.0f, .5f), XMMatrixTranslation(1.5f, 10.0f, -18.5f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");
-	//objCBIndex++;
-	//CreateItem("box", XMMatrixScaling(12.0f, 1.0f, .5f), XMMatrixTranslation(-6.0f, 10.0f, -27.5f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");
-	//objCBIndex++;
-	//CreateItem("box", XMMatrixScaling(12.0f, 1.0f, .5f), XMMatrixTranslation(6.0f, 10.0f, -30.8f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");
-	//objCBIndex++;
-	//CreateItem("box", XMMatrixScaling(0.5f, 1.0f, 3.0f), XMMatrixTranslation(2.6f, 10.0f, -25.5f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");
-	//objCBIndex++;
-	//CreateItem("box", XMMatrixScaling(0.5f, 1.0f, 4.7f), XMMatrixTranslation(14.6f, 10.0f, -27.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");
-	//objCBIndex++;
-	//CreateItem("box", XMMatrixScaling(8.0f, 1.0f, .5f), XMMatrixTranslation(8.5f, 10.0f, -23.7f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");
-	//objCBIndex++;
+	CreateItem("box", XMMatrixScaling(0.5f, 1.0f, 19.5f), XMMatrixTranslation(-12.6f, 10.0f, -28.5f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");
+	objCBIndex++;
+	CreateItem("box", XMMatrixScaling(0.5f, 1.0f, 5.0f), XMMatrixTranslation(3.4f, 10.0f, -18.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");
+	objCBIndex++;
+	CreateItem("box", XMMatrixScaling(0.5f, 1.0f, 3.0f), XMMatrixTranslation(-5.6f, 10.0f, -24.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");
+	objCBIndex++;
+	CreateItem("box", XMMatrixScaling(12.0f, 1.0f, .5f), XMMatrixTranslation(3.5f, 10.0f, -22.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");
+	objCBIndex++;
+	CreateItem("box", XMMatrixScaling(12.0f, 1.0f, .5f), XMMatrixTranslation(-4.0f, 10.0f, -33.5f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");
+	objCBIndex++;
+	CreateItem("box", XMMatrixScaling(12.0f, 1.0f, .5f), XMMatrixTranslation(6.0f, 10.0f, -38.8f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");
+	objCBIndex++;
+	CreateItem("box", XMMatrixScaling(0.5f, 1.0f, 3.0f), XMMatrixTranslation(4.6f, 10.0f, -31.5f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");
+	objCBIndex++;
+	CreateItem("box", XMMatrixScaling(0.5f, 1.0f, 6.5f), XMMatrixTranslation(14.4f, 10.0f, -34.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");
+	objCBIndex++;
+	CreateItem("box", XMMatrixScaling(6.0f, 1.0f, .5f), XMMatrixTranslation(9.5f, 10.0f, -29.7f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");
+	objCBIndex++;
 	
 	/*auto boxRitem = std::make_unique<RenderItem>();
 	XMStoreFloat4x4(&boxRitem->World, XMMatrixTranslation(3.0f, 2.0f, -9.0f));
