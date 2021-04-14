@@ -6,6 +6,7 @@
 #include "../Common/MathHelper.h"
 #include "../Common/UploadBuffer.h"
 #include "../Common/GeometryGenerator.h"
+#include "../Common/Camera.h"
 #include "FrameResource.h"
 #include "Waves.h"
 
@@ -23,7 +24,7 @@ const int gNumFrameResources = 3;
 struct RenderItem
 {
 	RenderItem() = default;
-
+	RenderItem(const RenderItem& rhs) = delete;
     // World matrix of the shape that describes the object's local space
     // relative to the world space, which defines the position, orientation,
     // and scale of the object in the world.
@@ -44,7 +45,7 @@ struct RenderItem
 	MeshGeometry* Geo = nullptr;
 
     // Primitive topology.
-    D3D12_PRIMITIVE_TOPOLOGY PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+    D3D12_PRIMITIVE_TOPOLOGY PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
     // DrawIndexedInstanced parameters.
     UINT IndexCount = 0;
@@ -140,6 +141,7 @@ private:
 	std::unique_ptr<Waves> mWaves;
 
     PassConstants mMainPassCB;
+	Camera mCamera;
 
 	XMFLOAT3 mEyePos = { 0.0f, 0.0f, 0.0f };
 	XMFLOAT4X4 mView = MathHelper::Identity4x4();
@@ -229,6 +231,10 @@ bool TreeBillboardsApp::Initialize()
 	// so we have to query this information.
     mCbvSrvDescriptorSize = md3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
+	/*mCamera.SetPosition(-5.f, 3.0f, -10.0f);
+	mCameraBoundbox.Center = mCamera.GetPosition3f();
+	mCameraBoundbox.Extents = XMFLOAT3(1.1f, 1.1f, 1.1f);*/
+
     mWaves = std::make_unique<Waves>(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
  
 	LoadTextures();
@@ -262,6 +268,9 @@ void TreeBillboardsApp::OnResize()
     // The window resized, so update the aspect ratio and recompute the projection matrix.
     XMMATRIX P = XMMatrixPerspectiveFovLH(0.25f*MathHelper::Pi, AspectRatio(), 1.0f, 1000.0f);
     XMStoreFloat4x4(&mProj, P);
+	//step2: When the window is resized, we no longer rebuild the projection matrix explicitly, 
+	//and instead delegate the work to the Camera class with SetLens:
+	//mCamera.SetLens(0.25f * MathHelper::Pi, AspectRatio(), 1.0f, 1000.0f);
 }
 
 void TreeBillboardsApp::Update(const GameTimer& gt)
@@ -386,6 +395,10 @@ void TreeBillboardsApp::OnMouseMove(WPARAM btnState, int x, int y)
 
         // Restrict the angle mPhi.
         mPhi = MathHelper::Clamp(mPhi, 0.1f, MathHelper::Pi - 0.1f);
+		//step4: Instead of updating the angles based on input to orbit camera around scene, 
+		//we rotate the camera’s look direction:
+		/*mCamera.Pitch(dy);
+		mCamera.RotateY(dx);*/
     }
     else if((btnState & MK_RBUTTON) != 0)
     {
@@ -406,6 +419,82 @@ void TreeBillboardsApp::OnMouseMove(WPARAM btnState, int x, int y)
  
 void TreeBillboardsApp::OnKeyboardInput(const GameTimer& gt)
 {
+	//if (GetAsyncKeyState('1') & 0x8000)
+	//	mIsWireframe = true;
+	//else
+	//	mIsWireframe = false;
+
+	//const float dt = gt.DeltaTime();
+
+	////GetAsyncKeyState returns a short (2 bytes)
+	//XMVECTOR predictPos = XMVectorSet(0.f, 0.f, 0.f, 0.f);
+	//if (GetAsyncKeyState('W') & 0x8000) //most significant bit (MSB) is 1 when key is pressed (1000 000 000 000)
+	//{
+	//	XMVECTOR s = XMVectorReplicate(mCameraSpeed * dt);
+	//	predictPos = XMVectorMultiplyAdd(s, mCamera.GetLook(), mCamera.GetPosition());
+
+	//	if (CheckCameraCollision(predictPos) == false)
+	//		mCamera.Walk(mCameraSpeed * dt);
+	//}
+
+	//if (GetAsyncKeyState('S') & 0x8000)
+	//{
+	//	XMVECTOR s = XMVectorReplicate(-mCameraSpeed * dt);
+	//	predictPos = XMVectorMultiplyAdd(s, mCamera.GetLook(), mCamera.GetPosition());
+
+	//	if (CheckCameraCollision(predictPos) == false)
+	//		mCamera.Walk(-mCameraSpeed * dt);
+	//}
+
+
+	//if (GetAsyncKeyState('A') & 0x8000)
+	//{
+	//	XMVECTOR s = XMVectorReplicate(-mCameraSpeed * dt);
+	//	predictPos = XMVectorMultiplyAdd(s, mCamera.GetRight(), mCamera.GetPosition());
+
+	//	if (CheckCameraCollision(predictPos) == false)
+	//		mCamera.Strafe(-mCameraSpeed * dt);
+
+	//}
+
+	//if (GetAsyncKeyState('D') & 0x8000)
+	//{
+	//	XMVECTOR s = XMVectorReplicate(mCameraSpeed * dt);
+	//	predictPos = XMVectorMultiplyAdd(s, mCamera.GetRight(), mCamera.GetPosition());
+
+
+	//	if (CheckCameraCollision(predictPos) == false)
+	//		mCamera.Strafe(mCameraSpeed * dt);
+	//}
+
+	////step1
+	//if (GetAsyncKeyState(VK_UP) & 0x8000)
+	//{
+	//	XMVECTOR s = XMVectorReplicate(mCameraSpeed * dt);
+	//	predictPos = XMVectorMultiplyAdd(s, mCamera.GetUp(), mCamera.GetPosition());
+
+	//	if (CheckCameraCollision(predictPos) == false)
+	//		mCamera.Pedestal(mCameraSpeed * dt);
+	//}
+
+	//if (GetAsyncKeyState(VK_DOWN) & 0x8000)
+	//{
+	//	XMVECTOR s = XMVectorReplicate(-mCameraSpeed * dt);
+	//	predictPos = XMVectorMultiplyAdd(s, mCamera.GetUp(), mCamera.GetPosition());
+
+	//	if (CheckCameraCollision(predictPos) == false)
+	//		mCamera.Pedestal(-mCameraSpeed * dt);
+	//}
+
+	//if (GetAsyncKeyState(VK_RIGHT) & 0x8000)
+	//	mCamera.Roll(10.0f * dt);
+
+	//if (GetAsyncKeyState(VK_LEFT) & 0x8000)
+	//	mCamera.Roll(-10.0f * dt);
+
+
+	//mCamera.UpdateViewMatrix();
+	//mCameraBoundbox.Center = mCamera.GetPosition3f();
 }
  
 void TreeBillboardsApp::UpdateCamera(const GameTimer& gt)
@@ -533,7 +622,7 @@ void TreeBillboardsApp::UpdateMainPassCB(const GameTimer& gt)
 	mMainPassCB.Lights[3].Strength = { 0.35f, 0.0f, 100.05f };
 	mMainPassCB.Lights[3].SpotPower = 2.0;
 
-	mMainPassCB.Lights[4].Position = { 20.0f, 10.0f, -8.0f };
+	mMainPassCB.Lights[4].Position = { 25.0f, 10.0f, -8.0f };
 	mMainPassCB.Lights[4].Strength = { 1000.0f, 1.0f, 0.05f };
 
 	auto currPassCB = mCurrFrameResource->PassCB.get();
@@ -1584,14 +1673,41 @@ void TreeBillboardsApp::BuildRenderItems()
 	objCBIndex++;
 	CreateItem("wedge", XMMatrixScaling(11.0f, 5.0f, 10.0f), XMMatrixTranslation(0.0f, 7.0f, -5.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "stair");// back left 
 	objCBIndex++;
-	CreateItemT("triangularPrism", XMMatrixScaling(5.0f, 5.0f, 5.0f), XMMatrixTranslation(7.0f, -20.0f, -8.0f), XMMatrixRotationRollPitchYaw( 0.0f, 0.f, XM_PIDIV2), objCBIndex, "tripris");// back left 
+	CreateItemT("triangularPrism", XMMatrixScaling(5.0f, 5.0f, 5.0f), XMMatrixTranslation(7.0f, -25.0f, -8.0f), XMMatrixRotationRollPitchYaw( 0.0f, 0.f, XM_PIDIV2), objCBIndex, "tripris");// back left 
 	objCBIndex++;
-	CreateItem("torus", XMMatrixScaling(3.0f, 3.0f, 3.0f), XMMatrixTranslation(19.8f, 12.0f, -8.0f), XMMatrixRotationRollPitchYaw(0.0f, 0.f, 0.0f), objCBIndex, "torus");// back left 
+	CreateItem("torus", XMMatrixScaling(3.0f, 3.0f, 3.0f), XMMatrixTranslation(24.8f, 12.0f, -8.0f), XMMatrixRotationRollPitchYaw(0.0f, 0.f, 0.0f), objCBIndex, "torus");// back left 
 	objCBIndex++;
 	//start maze
-	CreateItem("box", XMMatrixScaling(30.0f, 1.0f, .5f), XMMatrixTranslation(0.0f, 10.0f, -14.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");//back wall
+	CreateItem("box", XMMatrixScaling(12.0f, 1.0f, .5f), XMMatrixTranslation(12.0f, 10.0f, -14.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");//back wall
 	objCBIndex++;
-	CreateItem("box", XMMatrixScaling(30.0f, 1.0f, .5f), XMMatrixTranslation(0.0f, 10.0f, -34.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");//back wall
+	CreateItem("box", XMMatrixScaling(12.0f, 1.0f, .5f), XMMatrixTranslation(-12.0f, 10.0f, -14.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");//front wall
+	objCBIndex++;
+	CreateItem("box", XMMatrixScaling(12.0f, 1.0f, .5f), XMMatrixTranslation(12.0f, 10.0f, -34.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");//back wall
+	objCBIndex++;
+	CreateItem("box", XMMatrixScaling(12.0f, 1.0f, .5f), XMMatrixTranslation(-12.0f, 10.0f, -34.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");//front wall
+	objCBIndex++;
+	CreateItem("box", XMMatrixScaling(0.5f, 1.0f, 13.0f), XMMatrixTranslation(20.6f, 10.0f, -24.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");//Right wall
+	objCBIndex++;
+	CreateItem("box", XMMatrixScaling(0.5f, 1.0f, 13.0f), XMMatrixTranslation(-20.6f, 10.0f, -24.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");//Left wall
+	objCBIndex++;
+	//inner maze
+	CreateItem("box", XMMatrixScaling(0.5f, 1.0f, 11.5f), XMMatrixTranslation(-14.6f, 10.0f, -22.5f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");
+	objCBIndex++;
+	CreateItem("box", XMMatrixScaling(0.5f, 1.0f, 3.0f), XMMatrixTranslation(3.4f, 10.0f, -16.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");
+	objCBIndex++;
+	CreateItem("box", XMMatrixScaling(0.5f, 1.0f, 3.0f), XMMatrixTranslation(-8.6f, 10.0f, -20.5f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");
+	objCBIndex++;
+	CreateItem("box", XMMatrixScaling(14.0f, 1.0f, .5f), XMMatrixTranslation(1.5f, 10.0f, -18.5f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");
+	objCBIndex++;
+	CreateItem("box", XMMatrixScaling(12.0f, 1.0f, .5f), XMMatrixTranslation(-6.0f, 10.0f, -27.5f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");
+	objCBIndex++;
+	CreateItem("box", XMMatrixScaling(12.0f, 1.0f, .5f), XMMatrixTranslation(6.0f, 10.0f, -30.8f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");
+	objCBIndex++;
+	CreateItem("box", XMMatrixScaling(0.5f, 1.0f, 3.0f), XMMatrixTranslation(2.6f, 10.0f, -25.5f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");
+	objCBIndex++;
+	CreateItem("box", XMMatrixScaling(0.5f, 1.0f, 4.7f), XMMatrixTranslation(14.6f, 10.0f, -27.0f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");
+	objCBIndex++;
+	CreateItem("box", XMMatrixScaling(8.0f, 1.0f, .5f), XMMatrixTranslation(8.5f, 10.0f, -23.7f), XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f), objCBIndex, "maze");
 	objCBIndex++;
 	
 	/*auto boxRitem = std::make_unique<RenderItem>();
